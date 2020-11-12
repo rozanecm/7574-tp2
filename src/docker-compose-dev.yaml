@@ -1,0 +1,56 @@
+version: '3'
+services:
+  rabbitmq:
+    build:
+      context: ./rabbitmq
+      dockerfile: rabbitmq.dockerfile
+    ports:
+      - 15672:15672
+
+  file_reader:
+    build:
+      context: ./file_reader
+      dockerfile: file_reader.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+        - /media/rozanecm/Elements/Univerza/UBA/7574 distro I/datos tp2:/code/data_files
+
+  raw_data_receiver:
+    build:
+      context: ./raw_data_receiver
+      dockerfile: raw_data_receiver.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
+
+#  consumer1:
+#    build:
+#      context: ./consumer
+#      dockerfile: consumer.dockerfile
+#    restart: on-failure
+#    depends_on:
+#      - rabbitmq
+#    links: 
+#      - rabbitmq
+#    environment:
+#      - PYTHONUNBUFFERED=1
+#      - CONSUMER_ID=1
+#
+#  consumer2:
+#    build:
+#      context: ./consumer
+#      dockerfile: consumer.dockerfile
+#    restart: on-failure
+#    depends_on:
+#      - rabbitmq
+#    links: 
+#      - rabbitmq
+#    environment:
+#      - PYTHONUNBUFFERED=1
+#      - CONSUMER_ID=2
