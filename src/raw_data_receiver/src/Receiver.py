@@ -1,27 +1,32 @@
+import json
 import logging
-import os
-import zipfile
-from time import sleep
+import pika
 
 
-class FileReader():
+class Receiver():
     def __init__(self):
         logging.info("creating file reaaaer")
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
+        print(' [*] Waiting for messages. To exit press CTRL+C')
+        self.channel = self.initialize_queues()
 
     def run(self):
-        logging.info("file reader running...")
-        self.transmit_businesses_info()
-        self.transmit_reviews_info()
+        self.channel.start_consuming()
 
-    def transmit_businesses_info(self):
-        # TODO implementar
-        logging.info(os.listdir(os.path.join(os.getcwd(), "data_files")))
-        with zipfile.ZipFile(os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_business.json.zip")) as z:
-            with z.open("yelp_academic_dataset_business.json") as f:
-                for line in f:
-                    logging.info(line)
-                    sleep(1)
+    def initialize_queues(self):
+        # TODO immlpement this
+        channel = self.connection.channel()
+        channel.queue_declare(queue='raw_files')
+        # don't dispatch a new message to a worker until it has processed
+        # and acknowledged the previous one. Instead, it will dispatch it
+        # to the next worker that is not still busy.
+        # src: https://www.rabbitmq.com/tutorials/tutorial-two-python.html
+        channel.basic_qos(prefetch_count=1)
+        channel.basic_consume(queue='raw_files',
+                              on_message_callback=self.callback)
+        return channel
 
-    def transmit_reviews_info(self):
-        # TODO implementar
-        pass
+    def callback(self, ch, method, properties, body):
+        d = json.loads(body.decode())
+        logging.info(" [x] Received %r" % body)
+        ch.basic_ack(delivery_tag=method.delivery_tag)

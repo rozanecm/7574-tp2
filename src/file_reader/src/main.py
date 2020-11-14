@@ -5,6 +5,7 @@ import pika
 
 from FileReader import FileReader
 
+
 def initialize_log():
     """
     Python custom logging initialization
@@ -22,11 +23,13 @@ def initialize_queues():
     # TODO immlpement this
     connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
     channel = connection.channel()
-    channel.queue_declare(queue='businesses')
+    channel.queue_declare(queue='raw_files')
     return connection, channel
 
 
 def main():
+    # sleep so rabbit can get all set up,
+    # and we don't get mad throwing errors all around the place
     time.sleep(15)
     initialize_log()
     connection, channel = initialize_queues()

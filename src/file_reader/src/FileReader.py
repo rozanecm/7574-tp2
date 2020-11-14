@@ -25,7 +25,7 @@ class FileReader():
                     logging.info(line)
 
                     self.channel.basic_publish(exchange='',
-                                               routing_key='businesses',
+                                               routing_key='raw_files',
                                                body=line)
                     sleep(1)
 
