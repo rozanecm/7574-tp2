@@ -17,7 +17,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-        - /media/rozanecm/Elements/Univerza/UBA/7574 distro I/datos tp2:/code/data_files
+        - ../data:/code/data_files
 
   raw_data_receiver:
     build:
