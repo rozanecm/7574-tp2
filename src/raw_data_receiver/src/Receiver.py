@@ -9,6 +9,7 @@ class Receiver():
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
         print(' [*] Waiting for messages. To exit press CTRL+C')
         self.channel = self.initialize_queues()
+        self.busns_jsons_received = 0
 
     def run(self):
         self.channel.start_consuming()
@@ -27,6 +28,24 @@ class Receiver():
         return channel
 
     def callback(self, ch, method, properties, body):
-        d = json.loads(body.decode())
-        logging.info(" [x] Received %r" % body)
+        received_json = json.loads(body.decode())
+        self.process_json(received_json)
         ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    def process_json(self, received_json):
+        if "businesses" in received_json.keys():
+            self.process_businesses_json(received_json["businesses"])
+        elif "reviews" in received_json.keys():
+            self.process_reviews_json(received_json["reviews"])
+        else:
+            logging.error("JSON received contained not businesses nor reviews.")
+
+    def process_businesses_json(self, bus_json):
+        logging.info("processing busns json")
+        self.busns_jsons_received += 1
+        logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
+        pass
+
+    def process_reviews_json(self, revs_json):
+        logging.info("processing revws json")
+        pass
