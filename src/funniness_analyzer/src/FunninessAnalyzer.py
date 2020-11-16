@@ -47,4 +47,3 @@ class FunninessAnalyzer():
 
     def process_reviews_json(self, revs_json):
         logging.info("processing revws json")
-        pass

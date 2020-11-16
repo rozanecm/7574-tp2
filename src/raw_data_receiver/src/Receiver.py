@@ -9,8 +9,9 @@ class Receiver():
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
         print(' [*] Waiting for messages. To exit press CTRL+C')
         self.raw_files_channel = self.initialize_raw_file_queue()
-        self.businesses_queue = self.initialize_funniness_analyzer_queue()
+        self.funniness_analyzer_queue = self.initialize_funniness_analyzer_queue()
         self.busns_jsons_received = 0
+        self.revws_jsons_received = 0
 
     def run(self):
         self.raw_files_channel.start_consuming()
@@ -50,10 +51,15 @@ class Receiver():
         self.busns_jsons_received += 1
         logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
         # TODO process bus_json
-        self.businesses_queue.basic_publish(exchange='',
-                                            routing_key='funniness_analyzer',
-                                            body=json.dumps({"businesses": bus_json}))
+        self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='funniness_analyzer',
+                                                    body=json.dumps({"businesses": bus_json}))
 
     def process_reviews_json(self, revs_json):
         logging.info("processing revws json")
-        pass
+        self.revws_jsons_received += 1
+        logging.info("self.revws_jsons_received: {}".format(self.revws_jsons_received))
+        # TODO process revws_json
+        self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='funniness_analyzer',
+                                                    body=json.dumps({"reviews": revs_json}))
