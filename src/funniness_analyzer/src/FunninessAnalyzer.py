@@ -43,7 +43,9 @@ class FunninessAnalyzer():
         logging.info("processing busns json")
         self.busns_jsons_received += 1
         logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
+        logging.info(bus_json)
         # TODO process bus_json
 
     def process_reviews_json(self, revs_json):
         logging.info("processing revws json")
+        logging.info(revs_json)

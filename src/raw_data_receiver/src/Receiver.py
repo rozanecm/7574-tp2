@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import pika
@@ -40,35 +41,56 @@ class Receiver():
 
     def process_json(self, received_json):
         if "businesses" in received_json.keys():
-            self.process_businesses_json(received_json["businesses"])
+            self.process_businesses(received_json["businesses"])
         elif "reviews" in received_json.keys():
             self.process_reviews_json(received_json["reviews"])
         else:
             logging.error("JSON received contained not businesses nor reviews.")
 
-    def process_businesses_json(self, bus_json):
+    def process_businesses(self, businesses):
         logging.info("processing busns json")
         self.busns_jsons_received += 1
         logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
-        # TODO process bus_json
+        businesses_to_send = []
+        for bus in businesses:
+            bus_json = json.loads(bus)
+            business = {"business_id": bus_json["business_id"], "city": bus_json["city"]}
+            businesses_to_send.append(business)
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='funniness_analyzer',
-                                                    body=json.dumps({"businesses": bus_json}))
+                                                    body=json.dumps({"businesses": businesses_to_send}))
 
-    def process_reviews_json(self, revs_json):
+    def process_reviews_json(self, reviews):
         logging.info("processing revws json")
         self.revws_jsons_received += 1
         logging.info("self.revws_jsons_received: {}".format(self.revws_jsons_received))
         # TODO process revws_json
+        reviews_for_funniness_analyzer = []
+        reviews_for_threshold_analyzer = []
+        reviews_for_rating_analyzer = []
+        reviews_for_bot_detector = []
+        for rev in reviews:
+            rev_json = json.loads(rev)
+            review_for_funniness_analyzer = {"business_id": rev_json["business_id"], "funny": rev_json["funny"]}
+            review_for_threshold_analyzer = {"user_id": rev_json["user_id"]}
+            review_for_rating_analyzer = {"user_id": rev_json["user_id"], "stars": rev_json["stars"]}
+            review_for_bot_detector = {"user_id": rev_json["user_id"],
+                                       "text_md5": hashlib.md5(rev_json["text"].encode()).hexdigest()}
+
+            reviews_for_funniness_analyzer.append(review_for_funniness_analyzer)
+            reviews_for_threshold_analyzer.append(review_for_threshold_analyzer)
+            reviews_for_rating_analyzer.append(review_for_rating_analyzer)
+            reviews_for_bot_detector.append(review_for_bot_detector)
+
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='funniness_analyzer',
-                                                    body=json.dumps({"reviews": revs_json}))
+                                                    body=json.dumps({"reviews": reviews_for_funniness_analyzer}))
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='threshold_analyzer',
-                                                    body=json.dumps(revs_json))
+                                                    body=json.dumps(reviews_for_threshold_analyzer))
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='rating_analyzer',
-                                                    body=json.dumps(revs_json))
+                                                    body=json.dumps(reviews_for_rating_analyzer))
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='bot_detector',
-                                                    body=json.dumps(revs_json))
+                                                    body=json.dumps(reviews_for_bot_detector))

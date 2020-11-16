@@ -33,3 +33,4 @@ class ThresholdAnalyzer():
 
     def process_json(self, received_json):
         logging.info("received some json")
+        logging.info(received_json)
