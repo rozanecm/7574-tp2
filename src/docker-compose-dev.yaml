@@ -29,28 +29,12 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 
-#  consumer1:
-#    build:
-#      context: ./consumer
-#      dockerfile: consumer.dockerfile
-#    restart: on-failure
-#    depends_on:
-#      - rabbitmq
-#    links: 
-#      - rabbitmq
-#    environment:
-#      - PYTHONUNBUFFERED=1
-#      - CONSUMER_ID=1
-#
-#  consumer2:
-#    build:
-#      context: ./consumer
-#      dockerfile: consumer.dockerfile
-#    restart: on-failure
-#    depends_on:
-#      - rabbitmq
-#    links: 
-#      - rabbitmq
-#    environment:
-#      - PYTHONUNBUFFERED=1
-#      - CONSUMER_ID=2
+  funniness_analyzer:
+    build:
+      context: ./funniness_analyzer
+      dockerfile: funniness_analyzer.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1

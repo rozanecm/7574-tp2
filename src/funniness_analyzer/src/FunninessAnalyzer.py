@@ -3,33 +3,27 @@ import logging
 import pika
 
 
-class Receiver():
+class FunninessAnalyzer():
     def __init__(self):
-        logging.info("creating file reaaaer")
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
-        print(' [*] Waiting for messages. To exit press CTRL+C')
-        self.raw_files_channel = self.initialize_raw_file_queue()
-        self.businesses_queue = self.initialize_funniness_analyzer_queue()
         self.busns_jsons_received = 0
+        logging.info("creating funniness analyzer")
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
+
+        self.channel = self.initialize_queue()
 
     def run(self):
-        self.raw_files_channel.start_consuming()
+        self.channel.start_consuming()
 
-    def initialize_raw_file_queue(self):
+    def initialize_queue(self):
         channel = self.connection.channel()
-        channel.queue_declare(queue='raw_files')
+        channel.queue_declare(queue='funniness_analyzer')
         # don't dispatch a new message to a worker until it has processed
         # and acknowledged the previous one. Instead, it will dispatch it
         # to the next worker that is not still busy.
         # src: https://www.rabbitmq.com/tutorials/tutorial-two-python.html
         channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(queue='raw_files',
+        channel.basic_consume(queue='funniness_analyzer',
                               on_message_callback=self.callback)
-        return channel
-
-    def initialize_funniness_analyzer_queue(self):
-        channel = self.connection.channel()
-        channel.queue_declare(queue='funniness_analyzer')
         return channel
 
     def callback(self, ch, method, properties, body):
@@ -50,9 +44,6 @@ class Receiver():
         self.busns_jsons_received += 1
         logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
         # TODO process bus_json
-        self.businesses_queue.basic_publish(exchange='',
-                                            routing_key='funniness_analyzer',
-                                            body=json.dumps({"businesses": bus_json}))
 
     def process_reviews_json(self, revs_json):
         logging.info("processing revws json")

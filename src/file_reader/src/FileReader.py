@@ -3,6 +3,7 @@ import logging
 import os
 import zipfile
 
+# LINES_TO_SEND = 2
 LINES_TO_SEND = 10000
 
 
