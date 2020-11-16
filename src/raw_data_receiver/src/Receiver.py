@@ -63,3 +63,12 @@ class Receiver():
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='funniness_analyzer',
                                                     body=json.dumps({"reviews": revs_json}))
+        self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='threshold_analyzer',
+                                                    body=json.dumps(revs_json))
+        self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='rating_analyzer',
+                                                    body=json.dumps(revs_json))
+        self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='bot_detector',
+                                                    body=json.dumps(revs_json))
