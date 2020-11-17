@@ -55,7 +55,7 @@ class FunninessAnalyzer():
             logging.error("JSON received contained not businesses nor reviews.")
 
     def process_businesses_json(self, businesses_bulk):
-        logging.info("processing busns json")
+        # logging.info("processing busns json")
         self.busns_jsons_received += 1
         for element in businesses_bulk:
             current_json = json.loads(json.dumps(element))
@@ -65,13 +65,16 @@ class FunninessAnalyzer():
         # logging.info(bus_json)
 
     def process_reviews_json(self, revs_bulk):
-        logging.info("processing revws json")
+        # logging.info("processing revws json")
         for element in revs_bulk:
             current_json = json.loads(json.dumps(element))
             current_review_city = self.businesses[current_json["business_id"]]
             self.funny_per_city[current_review_city] += current_json["funny"]
 
     def report_results(self):
-        results_to_send = sorted(self.funny_per_city.items(), key=lambda x: x[1], reverse=True)[:10]
+        results_to_send = []
+        for element in sorted(self.funny_per_city.items(), key=lambda x: x[1], reverse=True)[:10]:
+            results_to_send.append("City: {}, funny reviews count: {}".format(element[0], element[1]))
         logging.info(results_to_send)
-        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send))
+        self.sink_queue.basic_publish(exchange='sink', routing_key='',
+                                      body=json.dumps({"funniest cities": results_to_send}))
