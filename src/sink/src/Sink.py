@@ -1,6 +1,7 @@
 import json
 import logging
 import pika
+import json
 
 
 class Sink():
@@ -40,4 +41,4 @@ class Sink():
 
     def process_json(self, received_json):
         logging.info("received some json")
-        logging.info(received_json)
+        logging.info(json.dumps(received_json, indent=2))

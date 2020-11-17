@@ -19,23 +19,34 @@ class FileReader():
         businesses_zip_path = os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_business.json.zip")
         reviews_zip_path = os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_review.json.zip")
 
-        self.transmit_file_info(businesses_zip_path, "yelp_academic_dataset_business.json", "businesses")
-        # self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews")
+        self.transmit_file_info(businesses_zip_path, "yelp_academic_dataset_business.json", "businesses", 10)
+        self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews", 10000)
         self.transmit_end_of_transmission_signal()
 
         self.connection.close()
 
-    def transmit_file_info(self, zip_path, file_in_zip, data_identifier):
+    def transmit_file_info(self, zip_path, file_in_zip, data_identifier, nrows=0):
+        """
+
+        :param zip_path:
+        :param file_in_zip:
+        :param data_identifier:
+        :param nrows: if 0 (default), all file is read
+        :return:
+        """
         lines_read = 0
         with zipfile.ZipFile(zip_path) as z:
             with z.open(file_in_zip) as f:
                 lines_to_send = []
                 for line in f:
-                    lines_read += 1
-                    lines_to_send.append(line.decode().strip())
-                    if len(lines_to_send) == LINES_TO_SEND:
-                        self.send_bulk(lines_to_send, data_identifier)
-                        lines_to_send.clear()
+                    if nrows and lines_read > nrows:
+                        break
+                    else:
+                        lines_read += 1
+                        lines_to_send.append(line.decode().strip())
+                        if len(lines_to_send) == LINES_TO_SEND:
+                            self.send_bulk(lines_to_send, data_identifier)
+                            lines_to_send.clear()
                 # send remaining lines,
                 # because if line count is not multiple of 100,
                 # then the last bulk will stay unsent.

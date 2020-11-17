@@ -2,6 +2,11 @@ import json
 import logging
 import pika
 
+MSGS_THRESHOLD = 2
+
+
+# MSGS_THRESHOLD = 50
+
 
 class ThresholdAnalyzer():
     def __init__(self):
@@ -11,6 +16,8 @@ class ThresholdAnalyzer():
 
         self.channel = self.initialize_queue()
         self.sink_queue = self.initialize_sink_queue()
+
+        self.reviewers_count = {}
 
     def run(self):
         self.channel.start_consuming()
@@ -41,10 +48,33 @@ class ThresholdAnalyzer():
         self.process_json(received_json)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    def process_json(self, received_json):
+    def process_json(self, received_msg):
         logging.info("received some json")
-        logging.info(received_json)
+        # logging.info(received_msg)
+        # logging.info(type(received_msg))
+        for e in received_msg:
+            current_json = json.loads(json.dumps(e))
+            if current_json["user_id"] not in self.reviewers_count.keys():
+                self.initialize_user(current_json["user_id"])
+            else:
+                self.update_user(current_json["user_id"])
 
     def report_results(self):
-        results_to_send = "some test results string from threshold analyzer"
-        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send))
+        results_to_send = self.process_end_results()
+        logging.info("reporting results:\n"
+                     "all data here: {}\n"
+                     "results to send: {}".format(self.reviewers_count, results_to_send))
+        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send, indent=2))
+
+    def initialize_user(self, user):
+        self.reviewers_count[user] = 1
+
+    def update_user(self, user):
+        self.reviewers_count[user] += 1
+
+    def process_end_results(self):
+        results_to_send = {}
+        for k, v in self.reviewers_count.items():
+            if v > MSGS_THRESHOLD:
+                results_to_send[k] = v
+        return results_to_send
