@@ -19,7 +19,7 @@ class FileReader():
         businesses_zip_path = os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_business.json.zip")
         reviews_zip_path = os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_review.json.zip")
 
-        self.transmit_file_info(businesses_zip_path, "yelp_academic_dataset_business.json", "businesses", 10)
+        self.transmit_file_info(businesses_zip_path, "yelp_academic_dataset_business.json", "businesses")
         self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews", 10000)
         self.transmit_end_of_transmission_signal()
 
