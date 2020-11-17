@@ -13,7 +13,8 @@ class Receiver():
         self.funniness_analyzer_queue = self.initialize_writer_queue("funniness_analyzer")
         self.threshold_analyzer_queue = self.initialize_writer_queue("threshold_analyzer")
         self.rating_analyzer_queue = self.initialize_writer_queue("rating_analyzer")
-        self.bot_detector_queue = self.initialize_writer_queue("bot_detector")
+        self.histogram_queue = self.initialize_writer_queue("histogram")
+        self.same_text_identifier_queue = self.initialize_writer_queue("same_text_identifier")
         self.busns_jsons_received = 0
         self.revws_jsons_received = 0
 
@@ -48,12 +49,12 @@ class Receiver():
             self.rating_analyzer_queue.basic_publish(exchange='',
                                                      routing_key='rating_analyzer',
                                                      body="EOT")
-            self.bot_detector_queue.basic_publish(exchange='',
-                                                  routing_key='bot_detector',
-                                                  body="EOT")
-            self.bot_detector_queue.basic_publish(exchange='',
-                                                  routing_key='histogram',
-                                                  body="EOT")
+            self.histogram_queue.basic_publish(exchange='',
+                                               routing_key='histogram',
+                                               body="EOT")
+            self.same_text_identifier_queue.basic_publish(exchange='',
+                                                          routing_key='same_text_identifier',
+                                                          body="EOT")
             logging.info("EOT received")
             return
         received_json = json.loads(body.decode())
@@ -84,26 +85,26 @@ class Receiver():
     def process_reviews_json(self, reviews):
         # logging.info("processing revws json")
         self.revws_jsons_received += 1
-        logging.info("self.revws_jsons_received: {}".format(self.revws_jsons_received))
+        # logging.info("self.revws_jsons_received: {}".format(self.revws_jsons_received))
         # TODO process revws_json
         reviews_for_funniness_analyzer = []
         reviews_for_threshold_analyzer = []
         reviews_for_rating_analyzer = []
-        reviews_for_bot_detector = []
+        reviews_for_same_text_identifier = []
         reviews_for_histogram = []
         for rev in reviews:
             rev_json = json.loads(rev)
             review_for_funniness_analyzer = {"business_id": rev_json["business_id"], "funny": rev_json["funny"]}
             review_for_threshold_analyzer = {"user_id": rev_json["user_id"]}
             review_for_rating_analyzer = {"user_id": rev_json["user_id"], "stars": rev_json["stars"]}
-            review_for_bot_detector = {"user_id": rev_json["user_id"],
-                                       "text_md5": hashlib.md5(rev_json["text"].encode()).hexdigest()}
+            review_for_same_text_identifier = {"user_id": rev_json["user_id"],
+                                               "text_md5": hashlib.md5(rev_json["text"].encode()).hexdigest()}
             review_for_histogram = {"date": rev_json["date"]}
 
             reviews_for_funniness_analyzer.append(review_for_funniness_analyzer)
             reviews_for_threshold_analyzer.append(review_for_threshold_analyzer)
             reviews_for_rating_analyzer.append(review_for_rating_analyzer)
-            reviews_for_bot_detector.append(review_for_bot_detector)
+            reviews_for_same_text_identifier.append(review_for_same_text_identifier)
             reviews_for_histogram.append(review_for_histogram)
 
         self.funniness_analyzer_queue.basic_publish(exchange='',
@@ -115,9 +116,9 @@ class Receiver():
         self.rating_analyzer_queue.basic_publish(exchange='',
                                                  routing_key='rating_analyzer',
                                                  body=json.dumps(reviews_for_rating_analyzer))
-        self.bot_detector_queue.basic_publish(exchange='',
-                                              routing_key='bot_detector',
-                                              body=json.dumps(reviews_for_bot_detector))
-        self.bot_detector_queue.basic_publish(exchange='',
-                                              routing_key='histogram',
-                                              body=json.dumps(reviews_for_histogram))
+        self.same_text_identifier_queue.basic_publish(exchange='',
+                                                      routing_key='same_text_identifier',
+                                                      body=json.dumps(reviews_for_same_text_identifier))
+        self.histogram_queue.basic_publish(exchange='',
+                                           routing_key='histogram',
+                                           body=json.dumps(reviews_for_histogram))

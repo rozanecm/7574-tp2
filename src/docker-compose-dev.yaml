@@ -59,6 +59,16 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 
+  same_text_identifier:
+    build:
+      context: ./same_text_identifier
+      dockerfile: same_text_identifier.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
+
   bot_detector:
     build:
       context: ./bot_detector

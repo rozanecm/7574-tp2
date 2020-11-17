@@ -40,5 +40,6 @@ class Sink():
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_json):
-        logging.info("received some json")
+        # logging.info("received some json")
+        # logging.info(json.dumps(received_json))
         logging.info(json.dumps(received_json, indent=2))

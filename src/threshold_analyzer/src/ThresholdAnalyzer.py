@@ -2,7 +2,8 @@ import json
 import logging
 import pika
 
-MSGS_THRESHOLD = 2
+MSGS_THRESHOLD = 7
+BOT_DETECTOR_MSGS_THRESHOLD = 2
 
 
 # MSGS_THRESHOLD = 50
@@ -16,6 +17,7 @@ class ThresholdAnalyzer():
 
         self.channel = self.initialize_queue()
         self.sink_queue = self.initialize_sink_queue()
+        self.bot_detector_queue = self.initialize_bot_detector_queue()
 
         self.reviewers_count = {}
 
@@ -39,6 +41,11 @@ class ThresholdAnalyzer():
         channel.exchange_declare(exchange='sink', exchange_type='fanout')
         return channel
 
+    def initialize_bot_detector_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='bot_detector', exchange_type='fanout')
+        return channel
+
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
@@ -49,7 +56,7 @@ class ThresholdAnalyzer():
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_msg):
-        logging.info("received some json")
+        # logging.info("received some json")
         # logging.info(received_msg)
         # logging.info(type(received_msg))
         for e in received_msg:
@@ -60,11 +67,15 @@ class ThresholdAnalyzer():
                 self.update_user(current_json["user_id"])
 
     def report_results(self):
-        results_to_send = self.process_end_results()
+        (results_to_send, results_for_bot_detector) = self.process_end_results()
         # logging.info("reporting results:\n"
         #              "all data here: {}\n"
         #              "results to send: {}".format(self.reviewers_count, results_to_send))
-        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send, indent=2))
+        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
+            {"Users with {}+ reviews".format(MSGS_THRESHOLD): results_to_send}, indent=2))
+        # logging.info({"threshold_breachers": results_for_bot_detector})
+        self.bot_detector_queue.basic_publish(exchange='bot_detector', routing_key='',
+                                              body=json.dumps({"threshold_breachers": results_for_bot_detector}))
 
     def initialize_user(self, user):
         self.reviewers_count[user] = 1
@@ -74,7 +85,10 @@ class ThresholdAnalyzer():
 
     def process_end_results(self):
         results_to_send = {}
+        results_for_bot_detector = {}
         for k, v in self.reviewers_count.items():
-            if v > MSGS_THRESHOLD:
+            if v >= MSGS_THRESHOLD:
                 results_to_send[k] = v
-        return results_to_send
+            if v >= BOT_DETECTOR_MSGS_THRESHOLD:
+                results_for_bot_detector[k] = v
+        return results_to_send, results_for_bot_detector
