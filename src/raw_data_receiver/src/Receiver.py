@@ -51,6 +51,9 @@ class Receiver():
             self.bot_detector_queue.basic_publish(exchange='',
                                                   routing_key='bot_detector',
                                                   body="EOT")
+            self.bot_detector_queue.basic_publish(exchange='',
+                                                  routing_key='histogram',
+                                                  body="EOT")
             logging.info("EOT received")
             return
         received_json = json.loads(body.decode())
@@ -87,6 +90,7 @@ class Receiver():
         reviews_for_threshold_analyzer = []
         reviews_for_rating_analyzer = []
         reviews_for_bot_detector = []
+        reviews_for_histogram = []
         for rev in reviews:
             rev_json = json.loads(rev)
             review_for_funniness_analyzer = {"business_id": rev_json["business_id"], "funny": rev_json["funny"]}
@@ -94,11 +98,13 @@ class Receiver():
             review_for_rating_analyzer = {"user_id": rev_json["user_id"], "stars": rev_json["stars"]}
             review_for_bot_detector = {"user_id": rev_json["user_id"],
                                        "text_md5": hashlib.md5(rev_json["text"].encode()).hexdigest()}
+            review_for_histogram = {"date": rev_json["date"]}
 
             reviews_for_funniness_analyzer.append(review_for_funniness_analyzer)
             reviews_for_threshold_analyzer.append(review_for_threshold_analyzer)
             reviews_for_rating_analyzer.append(review_for_rating_analyzer)
             reviews_for_bot_detector.append(review_for_bot_detector)
+            reviews_for_histogram.append(review_for_histogram)
 
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='funniness_analyzer',
@@ -112,3 +118,6 @@ class Receiver():
         self.bot_detector_queue.basic_publish(exchange='',
                                               routing_key='bot_detector',
                                               body=json.dumps(reviews_for_bot_detector))
+        self.bot_detector_queue.basic_publish(exchange='',
+                                              routing_key='histogram',
+                                              body=json.dumps(reviews_for_histogram))
