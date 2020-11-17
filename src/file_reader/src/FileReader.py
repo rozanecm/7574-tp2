@@ -20,7 +20,8 @@ class FileReader():
         reviews_zip_path = os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_review.json.zip")
 
         self.transmit_file_info(businesses_zip_path, "yelp_academic_dataset_business.json", "businesses")
-        self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews")
+        # self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews")
+        self.transmit_end_of_transmission_signal()
 
         self.connection.close()
 
@@ -48,3 +49,9 @@ class FileReader():
         self.channel.basic_publish(exchange='',
                                    routing_key='raw_files',
                                    body=body)
+
+    def transmit_end_of_transmission_signal(self):
+        logging.info("trasmitting EOT")
+        self.channel.basic_publish(exchange='',
+                                   routing_key='raw_files',
+                                   body="EOT")

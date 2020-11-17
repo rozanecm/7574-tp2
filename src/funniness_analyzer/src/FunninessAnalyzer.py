@@ -11,8 +11,11 @@ class FunninessAnalyzer():
 
         self.channel = self.initialize_queue()
 
+        self.sink_queue = self.initialize_sink_queue()
+
     def run(self):
         self.channel.start_consuming()
+        self.report_results()
 
     def initialize_queue(self):
         channel = self.connection.channel()
@@ -26,10 +29,19 @@ class FunninessAnalyzer():
                               on_message_callback=self.callback)
         return channel
 
+    def initialize_sink_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='sink', exchange_type='fanout')
+        return channel
+
     def callback(self, ch, method, properties, body):
-        received_json = json.loads(body.decode())
-        self.process_json(received_json)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        if body.decode() == "EOT":
+            self.report_results()
+            logging.info("EOT received")
+        else:
+            received_json = json.loads(body.decode())
+            self.process_json(received_json)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_json):
         if "businesses" in received_json.keys():
@@ -43,9 +55,13 @@ class FunninessAnalyzer():
         logging.info("processing busns json")
         self.busns_jsons_received += 1
         logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
-        logging.info(bus_json)
+        # logging.info(bus_json)
         # TODO process bus_json
 
     def process_reviews_json(self, revs_json):
         logging.info("processing revws json")
         logging.info(revs_json)
+
+    def report_results(self):
+        results_to_send = "some test results string from funniness analyzer"
+        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send))

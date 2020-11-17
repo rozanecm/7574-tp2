@@ -68,3 +68,13 @@ services:
       - rabbitmq
     environment:
       - PYTHONUNBUFFERED=1
+
+  sink:
+    build:
+      context: ./sink
+      dockerfile: sink.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1

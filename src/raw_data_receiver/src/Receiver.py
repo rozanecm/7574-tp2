@@ -10,7 +10,10 @@ class Receiver():
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
         print(' [*] Waiting for messages. To exit press CTRL+C')
         self.raw_files_channel = self.initialize_raw_file_queue()
-        self.funniness_analyzer_queue = self.initialize_funniness_analyzer_queue()
+        self.funniness_analyzer_queue = self.initialize_writer_queue("funniness_analyzer")
+        self.threshold_analyzer_queue = self.initialize_writer_queue("threshold_analyzer")
+        self.rating_analyzer_queue = self.initialize_writer_queue("rating_analyzer")
+        self.bot_detector_queue = self.initialize_writer_queue("bot_detector")
         self.busns_jsons_received = 0
         self.revws_jsons_received = 0
 
@@ -29,12 +32,27 @@ class Receiver():
                               on_message_callback=self.callback)
         return channel
 
-    def initialize_funniness_analyzer_queue(self):
+    def initialize_writer_queue(self, queue_name):
         channel = self.connection.channel()
-        channel.queue_declare(queue='funniness_analyzer')
+        channel.queue_declare(queue=queue_name)
         return channel
 
     def callback(self, ch, method, properties, body):
+        if body.decode() == "EOT":
+            self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                        routing_key='funniness_analyzer',
+                                                        body="EOT")
+            self.threshold_analyzer_queue.basic_publish(exchange='',
+                                                        routing_key='threshold_analyzer',
+                                                        body="EOT")
+            self.rating_analyzer_queue.basic_publish(exchange='',
+                                                     routing_key='rating_analyzer',
+                                                     body="EOT")
+            self.bot_detector_queue.basic_publish(exchange='',
+                                                  routing_key='bot_detector',
+                                                  body="EOT")
+            logging.info("EOT received")
+            return
         received_json = json.loads(body.decode())
         self.process_json(received_json)
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -85,12 +103,12 @@ class Receiver():
         self.funniness_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='funniness_analyzer',
                                                     body=json.dumps({"reviews": reviews_for_funniness_analyzer}))
-        self.funniness_analyzer_queue.basic_publish(exchange='',
+        self.threshold_analyzer_queue.basic_publish(exchange='',
                                                     routing_key='threshold_analyzer',
                                                     body=json.dumps(reviews_for_threshold_analyzer))
-        self.funniness_analyzer_queue.basic_publish(exchange='',
-                                                    routing_key='rating_analyzer',
-                                                    body=json.dumps(reviews_for_rating_analyzer))
-        self.funniness_analyzer_queue.basic_publish(exchange='',
-                                                    routing_key='bot_detector',
-                                                    body=json.dumps(reviews_for_bot_detector))
+        self.rating_analyzer_queue.basic_publish(exchange='',
+                                                 routing_key='rating_analyzer',
+                                                 body=json.dumps(reviews_for_rating_analyzer))
+        self.bot_detector_queue.basic_publish(exchange='',
+                                              routing_key='bot_detector',
+                                              body=json.dumps(reviews_for_bot_detector))

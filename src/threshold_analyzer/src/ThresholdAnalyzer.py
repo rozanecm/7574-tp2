@@ -10,6 +10,7 @@ class ThresholdAnalyzer():
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
 
         self.channel = self.initialize_queue()
+        self.sink_queue = self.initialize_sink_queue()
 
     def run(self):
         self.channel.start_consuming()
@@ -26,7 +27,16 @@ class ThresholdAnalyzer():
                               on_message_callback=self.callback)
         return channel
 
+    def initialize_sink_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='sink', exchange_type='fanout')
+        return channel
+
     def callback(self, ch, method, properties, body):
+        if body.decode() == "EOT":
+            self.report_results()
+            logging.info("EOT received")
+            return
         received_json = json.loads(body.decode())
         self.process_json(received_json)
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -34,3 +44,7 @@ class ThresholdAnalyzer():
     def process_json(self, received_json):
         logging.info("received some json")
         logging.info(received_json)
+
+    def report_results(self):
+        results_to_send = "some test results string from threshold analyzer"
+        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send))
