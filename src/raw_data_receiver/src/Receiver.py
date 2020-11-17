@@ -69,9 +69,9 @@ class Receiver():
             logging.error("JSON received contained not businesses nor reviews.")
 
     def process_businesses(self, businesses):
-        logging.info("processing busns json")
+        # logging.info("processing busns json")
         self.busns_jsons_received += 1
-        logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
+        # logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
         businesses_to_send = []
         for bus in businesses:
             bus_json = json.loads(bus)
@@ -82,7 +82,7 @@ class Receiver():
                                                     body=json.dumps({"businesses": businesses_to_send}))
 
     def process_reviews_json(self, reviews):
-        logging.info("processing revws json")
+        # logging.info("processing revws json")
         self.revws_jsons_received += 1
         logging.info("self.revws_jsons_received: {}".format(self.revws_jsons_received))
         # TODO process revws_json
