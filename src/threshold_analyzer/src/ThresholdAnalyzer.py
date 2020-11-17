@@ -61,9 +61,9 @@ class ThresholdAnalyzer():
 
     def report_results(self):
         results_to_send = self.process_end_results()
-        logging.info("reporting results:\n"
-                     "all data here: {}\n"
-                     "results to send: {}".format(self.reviewers_count, results_to_send))
+        # logging.info("reporting results:\n"
+        #              "all data here: {}\n"
+        #              "results to send: {}".format(self.reviewers_count, results_to_send))
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send, indent=2))
 
     def initialize_user(self, user):
