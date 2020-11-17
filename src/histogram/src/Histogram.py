@@ -46,7 +46,7 @@ class Histogram():
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_bulk):
-        logging.info("received some json")
+        # logging.info("received some json")
         # logging.info(received_bulk)
         for element in received_bulk:
             weekday = datetime.datetime.strptime(element['date'].split()[0], "%Y-%m-%d").strftime("%A")
@@ -55,4 +55,4 @@ class Histogram():
     def report_results(self):
         results_to_send = self.histogram
         logging.info(results_to_send)
-        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send))
+        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps({"Days of the week histogram": results_to_send}))
