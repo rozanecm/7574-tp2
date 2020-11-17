@@ -56,7 +56,7 @@ class RatingAnalyzer():
 
     def report_results(self):
         results_to_send = list(self.all_5_star_reviews[True])
-        logging.info(results_to_send)
+        # logging.info(results_to_send)
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send))
 
     def initialize_user(self, user, stars):

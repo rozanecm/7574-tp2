@@ -47,7 +47,7 @@ class Histogram():
 
     def process_json(self, received_bulk):
         logging.info("received some json")
-        logging.info(received_bulk)
+        # logging.info(received_bulk)
         for element in received_bulk:
             weekday = datetime.datetime.strptime(element['date'].split()[0], "%Y-%m-%d").strftime("%A")
             self.histogram[weekday] += 1
