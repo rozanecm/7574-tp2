@@ -2,12 +2,9 @@ import json
 import logging
 import pika
 
-MSGS_THRESHOLD = 7
-BOT_DETECTOR_MSGS_THRESHOLD = 2
-ALL_5_STARTS_MSGS_THRESHOLD = 2
-
-
-# MSGS_THRESHOLD = 50
+MSGS_THRESHOLD = 50
+BOT_DETECTOR_MSGS_THRESHOLD = 5
+ALL_5_STARTS_MSGS_THRESHOLD = 50
 
 
 class ThresholdAnalyzer():
@@ -73,7 +70,7 @@ class ThresholdAnalyzer():
         #              "all data here: {}\n"
         #              "results to send: {}".format(self.reviewers_count, results_to_send))
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
-            {"Users with {}+ reviews".format(MSGS_THRESHOLD): results_to_send}, indent=2))
+            {"Users with {}+ reviews".format(MSGS_THRESHOLD): len(results_to_send)}, indent=2))
         # logging.info({"threshold_breachers": results_for_bot_detector})
         self.bot_detector_queue.basic_publish(exchange='bot_detector', routing_key='',
                                               body=json.dumps({"threshold_breachers": results_for_bot_detector}))
