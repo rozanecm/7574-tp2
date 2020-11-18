@@ -69,6 +69,16 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 
+  thresh_and_rating_analyzer:
+    build:
+      context: ./thresh_and_rating_analyzer
+      dockerfile: thresh_and_rating_analyzer.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
+
   bot_detector:
     build:
       context: ./bot_detector

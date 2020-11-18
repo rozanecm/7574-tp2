@@ -4,6 +4,7 @@ import pika
 
 MSGS_THRESHOLD = 7
 BOT_DETECTOR_MSGS_THRESHOLD = 2
+ALL_5_STARTS_MSGS_THRESHOLD = 2
 
 
 # MSGS_THRESHOLD = 50
@@ -67,7 +68,7 @@ class ThresholdAnalyzer():
                 self.update_user(current_json["user_id"])
 
     def report_results(self):
-        (results_to_send, results_for_bot_detector) = self.process_end_results()
+        (results_to_send, results_for_bot_detector, results_for_thres_and_rating_analyzer) = self.process_end_results()
         # logging.info("reporting results:\n"
         #              "all data here: {}\n"
         #              "results to send: {}".format(self.reviewers_count, results_to_send))
@@ -76,6 +77,9 @@ class ThresholdAnalyzer():
         # logging.info({"threshold_breachers": results_for_bot_detector})
         self.bot_detector_queue.basic_publish(exchange='bot_detector', routing_key='',
                                               body=json.dumps({"threshold_breachers": results_for_bot_detector}))
+        self.bot_detector_queue.basic_publish(exchange='thresh_and_rating_analyzer', routing_key='',
+                                              body=json.dumps(
+                                                  {"threshold_breachers": results_for_thres_and_rating_analyzer}))
 
     def initialize_user(self, user):
         self.reviewers_count[user] = 1
@@ -86,9 +90,12 @@ class ThresholdAnalyzer():
     def process_end_results(self):
         results_to_send = {}
         results_for_bot_detector = {}
+        results_for_thres_and_rating_analyzer = {}
         for k, v in self.reviewers_count.items():
             if v >= MSGS_THRESHOLD:
                 results_to_send[k] = v
             if v >= BOT_DETECTOR_MSGS_THRESHOLD:
                 results_for_bot_detector[k] = v
-        return results_to_send, results_for_bot_detector
+            if v >= ALL_5_STARTS_MSGS_THRESHOLD:
+                results_for_thres_and_rating_analyzer[k] = v
+        return results_to_send, results_for_bot_detector, results_for_thres_and_rating_analyzer

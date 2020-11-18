@@ -10,7 +10,7 @@ class RatingAnalyzer():
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
 
         self.channel = self.initialize_queue()
-        self.sink_queue = self.initialize_sink_queue()
+        self.thresh_and_rating_analyzer_queue = self.initialize_thresh_and_rating_analyzer_queue()
 
         self.all_5_star_reviews = {True: set(), False: set()}
 
@@ -29,9 +29,9 @@ class RatingAnalyzer():
                               on_message_callback=self.callback)
         return channel
 
-    def initialize_sink_queue(self):
+    def initialize_thresh_and_rating_analyzer_queue(self):
         channel = self.connection.channel()
-        channel.exchange_declare(exchange='sink', exchange_type='fanout')
+        channel.exchange_declare(exchange='thresh_and_rating_analyzer', exchange_type='fanout')
         return channel
 
     def callback(self, ch, method, properties, body):
@@ -44,7 +44,7 @@ class RatingAnalyzer():
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_bulk):
-        logging.info("received some json")
+        # logging.info("received some json")
         # logging.info(received_bulk)
         for element in received_bulk:
             current_json = json.loads(json.dumps(element))
@@ -57,7 +57,8 @@ class RatingAnalyzer():
     def report_results(self):
         results_to_send = list(self.all_5_star_reviews[True])
         # logging.info(results_to_send)
-        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(results_to_send))
+        self.thresh_and_rating_analyzer_queue.basic_publish(exchange='thresh_and_rating_analyzer', routing_key='',
+                                                            body=json.dumps({"generous_raters": results_to_send}))
 
     def initialize_user(self, user, stars):
         self.all_5_star_reviews[stars == 5].add(user)
