@@ -55,10 +55,9 @@ class Receiver():
             self.same_text_identifier_queue.basic_publish(exchange='',
                                                           routing_key='same_text_identifier',
                                                           body="EOT")
-            logging.info("EOT received")
-            return
-        received_json = json.loads(body.decode())
-        self.process_json(received_json)
+        else:
+            received_json = json.loads(body.decode())
+            self.process_json(received_json)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_json):

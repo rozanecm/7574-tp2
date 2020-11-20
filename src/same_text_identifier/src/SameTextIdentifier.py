@@ -38,10 +38,9 @@ class SameTextIdentifier():
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
-            logging.info("EOT received")
-            return
-        received_json = json.loads(body.decode())
-        self.process_json(received_json)
+        else:
+            received_json = json.loads(body.decode())
+            self.process_json(received_json)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_bluk):

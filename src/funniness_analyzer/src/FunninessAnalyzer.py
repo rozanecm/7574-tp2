@@ -40,11 +40,10 @@ class FunninessAnalyzer():
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
-            logging.info("EOT received")
         else:
             received_json = json.loads(body.decode())
             self.process_json(received_json)
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_json):
         if "businesses" in received_json.keys():
