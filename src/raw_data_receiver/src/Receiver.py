@@ -18,6 +18,13 @@ class Receiver():
         self.busns_jsons_received = 0
         self.revws_jsons_received = 0
 
+        self.client_queue = self.initialize_client_queue()
+
+    def initialize_client_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='client', exchange_type='fanout')
+        return channel
+
     def run(self):
         self.raw_files_channel.start_consuming()
 
@@ -39,31 +46,60 @@ class Receiver():
         return channel
 
     def callback(self, ch, method, properties, body):
-        if body.decode() == "EOT":
-            self.funniness_analyzer_queue.basic_publish(exchange='',
-                                                        routing_key='funniness_analyzer',
-                                                        body="EOT")
-            self.threshold_analyzer_queue.basic_publish(exchange='',
-                                                        routing_key='threshold_analyzer',
-                                                        body="EOT")
-            self.rating_analyzer_queue.basic_publish(exchange='',
-                                                     routing_key='rating_analyzer',
-                                                     body="EOT")
-            self.histogram_queue.basic_publish(exchange='',
-                                               routing_key='histogram',
-                                               body="EOT")
-            self.same_text_identifier_queue.basic_publish(exchange='',
-                                                          routing_key='same_text_identifier',
-                                                          body="EOT")
+        if body.decode()[:3] == "EOT":
+            self.process_eot_msg(body, ch, method)
         else:
             received_json = json.loads(body.decode())
             self.process_json(received_json)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    def process_eot_msg(self, body, ch, method):
+        logging.info("received EOT msg: {}".format(body.decode()))
+        if int(body.decode()[3:]) == 1:
+            self.transmit_eot_cascade()
+        else:
+            next_eot = ''.join(["EOT", str(int(body.decode().split("EOT")[1]) - 1)])
+            logging.info('transmitting {}'.format(next_eot))
+            self.client_queue.basic_publish(exchange='client', routing_key='', body=next_eot)
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        self.close_connections()
+
+    def transmit_eot_cascade(self):
+        self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='funniness_analyzer',
+                                                    body="EOT")
+        self.threshold_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='threshold_analyzer',
+                                                    body="EOT")
+        self.rating_analyzer_queue.basic_publish(exchange='',
+                                                 routing_key='rating_analyzer',
+                                                 body="EOT")
+        self.histogram_queue.basic_publish(exchange='',
+                                           routing_key='histogram',
+                                           body="EOT")
+        self.same_text_identifier_queue.basic_publish(exchange='',
+                                                      routing_key='same_text_identifier',
+                                                      body="EOT")
+
+    def close_connections(self):
+        self.client_queue.close()
+        self.raw_files_channel.close()
+        self.funniness_analyzer_queue.close()
+        self.threshold_analyzer_queue.close()
+        self.rating_analyzer_queue.close()
+        self.histogram_queue.close()
+        self.same_text_identifier_queue.close()
 
     def process_json(self, received_json):
         if "businesses" in received_json.keys():
+            # logging.info("lgging businesses")
+            # logging.info(type(received_json["businesses"]))
+            # logging.info(len(received_json["businesses"]))
             self.process_businesses(received_json["businesses"])
         elif "reviews" in received_json.keys():
+            # logging.info("lgging reviews")
+            # logging.info(type(received_json["reviews"]))
+            # logging.info(len(received_json["reviews"]))
             self.process_reviews_json(received_json["reviews"])
         else:
             logging.error("JSON received contained not businesses nor reviews.")

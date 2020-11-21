@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 import pika
@@ -20,11 +21,17 @@ def initialize_log():
 
 
 def initialize_queues():
-    # TODO immlpement this
     connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
     channel = connection.channel()
     channel.queue_declare(queue='raw_files')
     return connection, channel
+
+
+def get_num_of_data_receivers():
+    try:
+        return int(os.environ["NUM_OF_DATA_RECEIVERS"])
+    except:
+        return 1
 
 
 def main():
@@ -33,7 +40,7 @@ def main():
     time.sleep(15)
     initialize_log()
     connection, channel = initialize_queues()
-    file_reader = FileReader(connection, channel)
+    file_reader = FileReader(connection, channel, get_num_of_data_receivers())
     file_reader.run()
 
 

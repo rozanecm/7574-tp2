@@ -15,6 +15,7 @@ services:
     depends_on:
       - rabbitmq
     environment:
+      - NUM_OF_DATA_RECEIVERS=4
       - PYTHONUNBUFFERED=1
     volumes:
         - ../data:/code/data_files

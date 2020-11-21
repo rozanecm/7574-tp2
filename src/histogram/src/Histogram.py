@@ -53,5 +53,5 @@ class Histogram():
 
     def report_results(self):
         results_to_send = self.histogram
-        logging.info(results_to_send)
+        # logging.info(results_to_send)
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps({"Days of the week histogram": results_to_send}))

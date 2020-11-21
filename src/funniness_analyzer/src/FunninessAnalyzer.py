@@ -74,6 +74,6 @@ class FunninessAnalyzer():
         results_to_send = []
         for element in sorted(self.funny_per_city.items(), key=lambda x: x[1], reverse=True)[:10]:
             results_to_send.append("City: {}, funny reviews count: {}".format(element[0], element[1]))
-        logging.info(results_to_send)
+        # logging.info(results_to_send)
         self.sink_queue.basic_publish(exchange='sink', routing_key='',
                                       body=json.dumps({"funniest cities": results_to_send}))
