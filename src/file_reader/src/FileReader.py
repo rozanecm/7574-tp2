@@ -4,7 +4,7 @@ import os
 import zipfile
 
 # LINES_TO_SEND = 100
-LINES_TO_SEND = 100000
+LINES_TO_SEND = 50000
 
 
 class FileReader():
@@ -71,8 +71,8 @@ class FileReader():
         reviews_zip_path = os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_review.json.zip")
 
         self.transmit_file_info(businesses_zip_path, "yelp_academic_dataset_business.json", "businesses")
-        # self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews")
-        self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews", 200000)
+        self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews")
+        # self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews", 200000)
         self.transmit_end_of_transmission_signal(self.num_of_data_receivers)
 
         self.receiving_channel.start_consuming()
@@ -110,7 +110,7 @@ class FileReader():
     def send_bulk(self, lines_to_send, data_identifier):
         dict_to_send = {data_identifier: lines_to_send}
         body = json.dumps(dict_to_send)
-        logging.info("sending {} lines".format(len(lines_to_send)))
+        # logging.info("sending {} lines".format(len(lines_to_send)))
         self.channel.basic_publish(exchange='',
                                    routing_key='raw_files',
                                    body=body)

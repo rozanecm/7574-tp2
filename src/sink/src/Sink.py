@@ -54,7 +54,7 @@ class Sink():
     def process_json(self, received_json):
         if "num of expected results" in received_json.keys():
             self.num_of_expected_results = received_json["num of expected results"]
-            logging.info("received expected num of results: {}".format(self.num_of_expected_results))
+            # logging.info("received expected num of results: {}".format(self.num_of_expected_results))
         else:
             # logging.info("received some json")
             # logging.info(json.dumps(received_json))
