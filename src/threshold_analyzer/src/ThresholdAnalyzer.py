@@ -47,10 +47,12 @@ class ThresholdAnalyzer():
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.close_connections()
         else:
             received_json = json.loads(body.decode())
             self.process_json(received_json)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_msg):
         # logging.info("received some json")
@@ -95,3 +97,8 @@ class ThresholdAnalyzer():
             if v >= ALL_5_STARTS_MSGS_THRESHOLD:
                 results_for_thres_and_rating_analyzer[k] = v
         return results_to_send, results_for_bot_detector, results_for_thres_and_rating_analyzer
+
+    def close_connections(self):
+        self.channel.close()
+        self.sink_queue.close()
+        self.bot_detector_queue.close()

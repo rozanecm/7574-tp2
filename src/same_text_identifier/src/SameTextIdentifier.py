@@ -38,10 +38,12 @@ class SameTextIdentifier():
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.close_connections()
         else:
             received_json = json.loads(body.decode())
             self.process_json(received_json)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_bluk):
         # logging.info("received some json")
@@ -67,3 +69,7 @@ class SameTextIdentifier():
         if self.last_texts[user] != text_md5:
             self.always_same_text[True].discard(user)
             self.always_same_text[False].add(user)
+
+    def close_connections(self):
+        self.channel.close()
+        self.bot_detector_queue.close()

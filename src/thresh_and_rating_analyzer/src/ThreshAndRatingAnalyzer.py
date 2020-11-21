@@ -17,6 +17,7 @@ class ThreshAndRatingAnalyzer():
 
         self.received_same_texters = False
         self.received_threshold_breachers = False
+        self.eot_achieved = False
 
     def run(self):
         self.channel.start_consuming()
@@ -53,6 +54,8 @@ class ThreshAndRatingAnalyzer():
         received_json = json.loads(body.decode())
         self.process_json(received_json)
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        if self.eot_achieved:
+            self.close_connections()
 
     def process_json(self, received_bulk):
         # logging.info("received some json")
@@ -64,6 +67,7 @@ class ThreshAndRatingAnalyzer():
             self.received_threshold_breachers = True
         if self.received_same_texters and self.received_threshold_breachers:
             self.report_results()
+            self.eot_achieved = True
         # logging.info(json.dumps(received_bulk))
 
     def process_generous_raters(self, received_bulk):
@@ -83,3 +87,7 @@ class ThreshAndRatingAnalyzer():
         #              "results to send: {}".format(self.reviewers_count, results_to_send))
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
             {"chronic generous raters": results_to_send}, indent=2))
+
+    def close_connections(self):
+        self.sink_queue.close()
+        self.channel.close()

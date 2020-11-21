@@ -35,15 +35,17 @@ class FileReader():
         return channel
 
     def callback(self, ch, method, properties, body):
-        self.process_msg(body.decode())
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        self.process_msg(body.decode(), ch, method)
 
-    def process_msg(self, msg):
+    def process_msg(self, msg, ch, method):
         logging.info("processing received msg:  {}".format(msg))
         if msg[:3] == "EOT":
             self.process_eot_msg(msg)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
         else:
             self.process_results_msg(msg)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.close_connections()
 
     def process_eot_msg(self, msg):
         logging.info("processing eot msg: {}".format(msg))
@@ -119,3 +121,7 @@ class FileReader():
         self.channel.basic_publish(exchange='',
                                    routing_key='raw_files',
                                    body=body)
+
+    def close_connections(self):
+        self.channel.close()
+        self.receiving_channel.close()

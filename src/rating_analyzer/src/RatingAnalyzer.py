@@ -37,10 +37,12 @@ class RatingAnalyzer():
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.close_connections()
         else:
             received_json = json.loads(body.decode())
             self.process_json(received_json)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_bulk):
         # logging.info("received some json")
@@ -66,3 +68,6 @@ class RatingAnalyzer():
         if not stars == 5:
             self.all_5_star_reviews[True].discard(user)
             self.all_5_star_reviews[False].add(user)
+
+    def close_connections(self):
+        self.channel.close()

@@ -39,10 +39,12 @@ class Histogram():
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.close_connections()
         else:
             received_json = json.loads(body.decode())
             self.process_json(received_json)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_json(self, received_bulk):
         # logging.info("received some json")
@@ -55,3 +57,7 @@ class Histogram():
         results_to_send = self.histogram
         # logging.info(results_to_send)
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps({"Days of the week histogram": results_to_send}))
+
+    def close_connections(self):
+        self.sink_queue.close()
+        self.channel.close()
