@@ -3,6 +3,8 @@ import json
 import logging
 import pika
 
+NUM_OF_RESULTS_TO_SEND = 5
+
 
 class Receiver():
     def __init__(self):
@@ -15,6 +17,7 @@ class Receiver():
         self.rating_analyzer_queue = self.initialize_writer_queue("rating_analyzer")
         self.histogram_queue = self.initialize_writer_queue("histogram")
         self.same_text_identifier_queue = self.initialize_writer_queue("same_text_identifier")
+        self.sink_queue = self.initialize_sink_queue()
         self.busns_jsons_received = 0
         self.revws_jsons_received = 0
 
@@ -25,8 +28,18 @@ class Receiver():
         channel.exchange_declare(exchange='client', exchange_type='fanout')
         return channel
 
+    def initialize_sink_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='sink', exchange_type='fanout')
+        return channel
+
     def run(self):
+        self.inform_number_of_results_to_expect()
         self.raw_files_channel.start_consuming()
+
+    def inform_number_of_results_to_expect(self):
+        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
+            {"num of expected results": NUM_OF_RESULTS_TO_SEND}))
 
     def initialize_raw_file_queue(self):
         channel = self.connection.channel()
@@ -89,6 +102,7 @@ class Receiver():
         self.rating_analyzer_queue.close()
         self.histogram_queue.close()
         self.same_text_identifier_queue.close()
+        self.sink_queue.close()
 
     def process_json(self, received_json):
         if "businesses" in received_json.keys():
@@ -121,7 +135,6 @@ class Receiver():
         # logging.info("processing revws json")
         self.revws_jsons_received += 1
         # logging.info("self.revws_jsons_received: {}".format(self.revws_jsons_received))
-        # TODO process revws_json
         reviews_for_funniness_analyzer = []
         reviews_for_threshold_analyzer = []
         reviews_for_rating_analyzer = []
