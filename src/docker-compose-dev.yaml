@@ -100,6 +100,16 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 
+  histogram_sink:
+    build:
+      context: ./histogram_sink
+      dockerfile: histogram_sink.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
+
   sink:
     build:
       context: ./sink

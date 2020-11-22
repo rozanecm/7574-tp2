@@ -11,7 +11,7 @@ class Histogram():
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
 
         self.channel = self.initialize_queue()
-        self.sink_queue = self.initialize_sink_queue()
+        self.histogram_sink_queue = self.initialize_histogram_sink_queue()
 
         self.histogram = {"Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0, "Saturday": 0,
                           "Sunday": 0}
@@ -31,9 +31,9 @@ class Histogram():
                               on_message_callback=self.callback)
         return channel
 
-    def initialize_sink_queue(self):
+    def initialize_histogram_sink_queue(self):
         channel = self.connection.channel()
-        channel.exchange_declare(exchange='sink', exchange_type='fanout')
+        channel.exchange_declare(exchange='histogram_sink', exchange_type='fanout')
         return channel
 
     def callback(self, ch, method, properties, body):
@@ -56,8 +56,11 @@ class Histogram():
     def report_results(self):
         results_to_send = self.histogram
         # logging.info(results_to_send)
-        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps({"Days of the week histogram": results_to_send}))
+        self.histogram_sink_queue.basic_publish(exchange='histogram_sink', routing_key='',
+                                                body=json.dumps(results_to_send))
+        self.histogram_sink_queue.basic_publish(exchange='histogram_sink', routing_key='',
+                                                body="EOT")
 
     def close_connections(self):
-        self.sink_queue.close()
+        self.histogram_sink_queue.close()
         self.channel.close()
