@@ -12,6 +12,7 @@ class Histogram():
 
         self.channel = self.initialize_queue()
         self.histogram_sink_queue = self.initialize_histogram_sink_queue()
+        self.queue_to_raw_data_receiver = self.initialize_queue_to_hist_sync()
 
         self.histogram = {"Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0, "Saturday": 0,
                           "Sunday": 0}
@@ -36,15 +37,34 @@ class Histogram():
         channel.exchange_declare(exchange='histogram_sink', exchange_type='fanout')
         return channel
 
+    def initialize_queue_to_hist_sync(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='histogram_syncronizer', exchange_type='fanout')
+        return channel
+
     def callback(self, ch, method, properties, body):
-        if body.decode() == "EOT":
-            self.report_results()
-            ch.basic_ack(delivery_tag=method.delivery_tag)
-            self.close_connections()
+        if body.decode()[:3] == "EOT":
+            self.process_eot_msg(body, ch, method)
+            # self.report_results()
+            # ch.basic_ack(delivery_tag=method.delivery_tag)
+            # self.close_connections()
         else:
             received_json = json.loads(body.decode())
             self.process_json(received_json)
             ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    def process_eot_msg(self, body, ch, method):
+        self.report_results()
+        logging.info("received EOT msg: {}".format(body.decode()))
+        next_eot = ''.join(["EOT", str(int(body.decode().split("EOT")[1]) - 1)])
+        logging.info('transmitting {}'.format(next_eot))
+        self.queue_to_raw_data_receiver.basic_publish(exchange='histogram_syncronizer', routing_key='',
+                                                      body=next_eot)
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        if int(body.decode()[3:]) == 1:
+            self.histogram_sink_queue.basic_publish(exchange='histogram_sink', routing_key='',
+                                                    body="EOT")
+        self.close_connections()
 
     def process_json(self, received_bulk):
         # logging.info("received some json")
@@ -58,8 +78,6 @@ class Histogram():
         # logging.info(results_to_send)
         self.histogram_sink_queue.basic_publish(exchange='histogram_sink', routing_key='',
                                                 body=json.dumps(results_to_send))
-        self.histogram_sink_queue.basic_publish(exchange='histogram_sink', routing_key='',
-                                                body="EOT")
 
     def close_connections(self):
         self.histogram_sink_queue.close()

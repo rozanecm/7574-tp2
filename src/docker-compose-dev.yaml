@@ -27,6 +27,7 @@ services:
     restart: on-failure
     depends_on:
       - rabbitmq
+      - sink
     environment:
       - PYTHONUNBUFFERED=1
 
@@ -119,3 +120,14 @@ services:
       - rabbitmq
     environment:
       - PYTHONUNBUFFERED=1
+
+  histogram_syncronizer:
+    build:
+      context: ./histogram_syncronizer
+      dockerfile: histogram_syncronizer.dockerfile
+    restart: on-failure
+    depends_on:
+      - rabbitmq
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NUM_OF_HISTOGRAMMERS=4

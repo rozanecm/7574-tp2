@@ -16,6 +16,7 @@ class Receiver():
         self.threshold_analyzer_queue = self.initialize_writer_queue("threshold_analyzer")
         self.rating_analyzer_queue = self.initialize_writer_queue("rating_analyzer")
         self.histogram_queue = self.initialize_writer_queue("histogram")
+        self.histogram_syncronizer_queue = self.initialize_histogram_syncronizer_queue()
         self.same_text_identifier_queue = self.initialize_writer_queue("same_text_identifier")
         self.sink_queue = self.initialize_sink_queue()
         self.busns_jsons_received = 0
@@ -33,11 +34,17 @@ class Receiver():
         channel.exchange_declare(exchange='sink', exchange_type='fanout')
         return channel
 
+    def initialize_histogram_syncronizer_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='histogram_syncronizer', exchange_type='fanout')
+        return channel
+
     def run(self):
         self.inform_number_of_results_to_expect()
         self.raw_files_channel.start_consuming()
 
     def inform_number_of_results_to_expect(self):
+        logging.info("informing number of results to send")
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
             {"num of expected results": NUM_OF_RESULTS_TO_SEND}))
 
@@ -87,9 +94,11 @@ class Receiver():
         self.rating_analyzer_queue.basic_publish(exchange='',
                                                  routing_key='rating_analyzer',
                                                  body="EOT")
-        self.histogram_queue.basic_publish(exchange='',
-                                           routing_key='histogram',
-                                           body="EOT")
+        # self.transmit_eot_to_histogrammer()
+
+        self.histogram_syncronizer_queue.basic_publish(exchange='histogram_syncronizer',
+                                                       routing_key='',
+                                                       body="EOT")
         self.same_text_identifier_queue.basic_publish(exchange='',
                                                       routing_key='same_text_identifier',
                                                       body="EOT")
@@ -103,6 +112,7 @@ class Receiver():
         self.histogram_queue.close()
         self.same_text_identifier_queue.close()
         self.sink_queue.close()
+        self.histogram_syncronizer_queue.close()
 
     def process_json(self, received_json):
         if "businesses" in received_json.keys():
@@ -170,3 +180,10 @@ class Receiver():
         self.histogram_queue.basic_publish(exchange='',
                                            routing_key='histogram',
                                            body=json.dumps(reviews_for_histogram))
+
+    def transmit_eot_to_histogrammer(self):
+        msg = "EOT"
+        logging.info("sending EOT to hist sync.")
+        self.histogram_syncronizer_queue.basic_publish(exchange='',
+                                                       routing_key='histogram_syncronizer',
+                                                       body=msg)

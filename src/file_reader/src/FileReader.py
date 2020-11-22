@@ -71,8 +71,8 @@ class FileReader():
         reviews_zip_path = os.path.join(os.getcwd(), "data_files", "yelp_academic_dataset_review.json.zip")
 
         self.transmit_file_info(businesses_zip_path, "yelp_academic_dataset_business.json", "businesses")
-        # self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews")
-        self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews", 200000)
+        self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews")
+        # self.transmit_file_info(reviews_zip_path, "yelp_academic_dataset_review.json", "reviews", 200000)
         self.transmit_end_of_transmission_signal(self.num_of_data_receivers)
 
         self.receiving_channel.start_consuming()

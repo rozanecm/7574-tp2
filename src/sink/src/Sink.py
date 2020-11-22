@@ -7,7 +7,7 @@ import json
 class Sink():
     def __init__(self):
         self.busns_jsons_received = 0
-        logging.info("creating funniness analyzer")
+        logging.info("creating Sink")
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
 
         self.channel = self.initialize_queue()
@@ -46,13 +46,16 @@ class Sink():
     def callback(self, ch, method, properties, body):
         received_json = json.loads(body.decode())
         self.process_json(received_json)
+        logging.info("received json: {}".format(received_json.keys()))
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        logging.info("Now I have {} results of the {} expected".format(len(self.results), self.num_of_expected_results))
         if len(self.results) == self.num_of_expected_results:
             self.send_results()
             self.close_connections()
 
     def process_json(self, received_json):
         if "num of expected results" in received_json.keys():
+            logging.info("received num of expected results: {}".format(received_json))
             self.num_of_expected_results = received_json["num of expected results"]
             # logging.info("received expected num of results: {}".format(self.num_of_expected_results))
         else:

@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from Receiver import Receiver
+from HistogramSyncronizer import HistogramSyncronizer
 
 
 def initialize_log():
@@ -18,13 +18,20 @@ def initialize_log():
     )
 
 
+def get_num_of_histogrammers():
+    try:
+        return int(os.environ["NUM_OF_HISTOGRAMMERS"])
+    except:
+        return 1
+
+
 def main():
     # sleep so rabbit can get all set up,
     # and we don't get mad throwing errors all around the place
     time.sleep(15)
     initialize_log()
-    receiver = Receiver()
-    receiver.run()
+    histogram_syncronizer = HistogramSyncronizer(get_num_of_histogrammers())
+    histogram_syncronizer.run()
 
 
 if __name__ == "__main__":

@@ -52,9 +52,8 @@ class HistogramSink():
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def send_results(self):
-        logging.info("sending results")
-        # TODO hacer de los results un dict ordenado. Mientras...
         results_to_send = self.prepare_results_to_send()
+        logging.info("sending results")
         self.sink_queue.basic_publish(exchange='sink', routing_key='',
                                       body=json.dumps({"Days of the week histogram": results_to_send}))
         self.close_connections()
@@ -68,8 +67,8 @@ class HistogramSink():
         for key in self.results[0]:
             sum_this_key = 0
             for dict in self.results:
-                logging.info(type(dict[key]))
-                logging.info(dict[key])
+                # logging.info(type(dict[key]))
+                # logging.info(dict[key])
                 sum_this_key += dict[key]
             d_res[key] = sum_this_key
         return d_res
