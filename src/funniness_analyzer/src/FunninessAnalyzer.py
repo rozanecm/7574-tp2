@@ -70,7 +70,8 @@ class FunninessAnalyzer():
         for element in revs_bulk:
             current_json = json.loads(json.dumps(element))
             current_review_city = self.businesses[current_json["business_id"]]
-            self.funny_per_city[current_review_city] += current_json["funny"]
+            if current_json["funny"] > 0:
+                self.funny_per_city[current_review_city] += 1
 
     def report_results(self):
         results_to_send = []
