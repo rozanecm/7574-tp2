@@ -12,7 +12,7 @@ class Histogram():
 
         self.channel = self.initialize_queue()
         self.histogram_sink_queue = self.initialize_histogram_sink_queue()
-        self.queue_to_raw_data_receiver = self.initialize_queue_to_hist_sync()
+        self.queue_to_hist_sync = self.initialize_queue_to_hist_sync()
 
         self.histogram = {"Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0, "Saturday": 0,
                           "Sunday": 0}
@@ -55,8 +55,8 @@ class Histogram():
         logging.info("received EOT msg: {}".format(body.decode()))
         next_eot = ''.join(["EOT", str(int(body.decode().split("EOT")[1]) - 1)])
         logging.info('transmitting {}'.format(next_eot))
-        self.queue_to_raw_data_receiver.basic_publish(exchange='histogram_syncronizer', routing_key='',
-                                                      body=next_eot)
+        self.queue_to_hist_sync.basic_publish(exchange='histogram_syncronizer', routing_key='',
+                                              body=next_eot)
         ch.basic_ack(delivery_tag=method.delivery_tag)
         if int(body.decode()[3:]) == 1:
             self.histogram_sink_queue.basic_publish(exchange='histogram_sink', routing_key='',
