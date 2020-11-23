@@ -8,7 +8,7 @@ NUM_OF_RESULTS_TO_SEND = 5
 
 class Receiver():
     def __init__(self):
-        logging.info("creating file reaaaer")
+        logging.info("creating file receiver")
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
         print(' [*] Waiting for messages. To exit press CTRL+C')
         self.raw_files_channel = self.initialize_raw_file_queue()
@@ -19,34 +19,8 @@ class Receiver():
         self.histogram_syncronizer_queue = self.initialize_histogram_syncronizer_queue()
         self.same_text_identifier_queue = self.initialize_writer_queue("same_text_identifier")
         self.sink_queue = self.initialize_sink_queue()
-        self.busns_jsons_received = 0
-        self.revws_jsons_received = 0
 
         self.client_queue = self.initialize_client_queue()
-
-    def initialize_client_queue(self):
-        channel = self.connection.channel()
-        channel.exchange_declare(exchange='client', exchange_type='fanout')
-        return channel
-
-    def initialize_sink_queue(self):
-        channel = self.connection.channel()
-        channel.exchange_declare(exchange='sink', exchange_type='fanout')
-        return channel
-
-    def initialize_histogram_syncronizer_queue(self):
-        channel = self.connection.channel()
-        channel.exchange_declare(exchange='histogram_syncronizer', exchange_type='fanout')
-        return channel
-
-    def run(self):
-        self.inform_number_of_results_to_expect()
-        self.raw_files_channel.start_consuming()
-
-    def inform_number_of_results_to_expect(self):
-        logging.info("informing number of results to send")
-        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
-            {"num of expected results": NUM_OF_RESULTS_TO_SEND}))
 
     def initialize_raw_file_queue(self):
         channel = self.connection.channel()
@@ -60,11 +34,6 @@ class Receiver():
                               on_message_callback=self.callback)
         return channel
 
-    def initialize_writer_queue(self, queue_name):
-        channel = self.connection.channel()
-        channel.queue_declare(queue=queue_name)
-        return channel
-
     def callback(self, ch, method, properties, body):
         if body.decode()[:3] == "EOT":
             self.process_eot_msg(body, ch, method)
@@ -72,6 +41,35 @@ class Receiver():
             received_json = json.loads(body.decode())
             self.process_json(received_json)
             ch.basic_ack(delivery_tag=method.delivery_tag)
+
+    def initialize_writer_queue(self, queue_name):
+        channel = self.connection.channel()
+        channel.queue_declare(queue=queue_name)
+        return channel
+
+    def initialize_histogram_syncronizer_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='histogram_syncronizer', exchange_type='fanout')
+        return channel
+
+    def initialize_sink_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='sink', exchange_type='fanout')
+        return channel
+
+    def initialize_client_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='client', exchange_type='fanout')
+        return channel
+
+    def run(self):
+        self.inform_number_of_results_to_expect()
+        self.raw_files_channel.start_consuming()
+
+    def inform_number_of_results_to_expect(self):
+        logging.info("informing number of results to send")
+        self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
+            {"num of expected results": NUM_OF_RESULTS_TO_SEND}))
 
     def process_eot_msg(self, body, ch, method):
         logging.info("received EOT msg: {}".format(body.decode()))
@@ -84,54 +82,15 @@ class Receiver():
         ch.basic_ack(delivery_tag=method.delivery_tag)
         self.close_connections()
 
-    def transmit_eot_cascade(self):
-        self.funniness_analyzer_queue.basic_publish(exchange='',
-                                                    routing_key='funniness_analyzer',
-                                                    body="EOT")
-        self.threshold_analyzer_queue.basic_publish(exchange='',
-                                                    routing_key='threshold_analyzer',
-                                                    body="EOT")
-        self.rating_analyzer_queue.basic_publish(exchange='',
-                                                 routing_key='rating_analyzer',
-                                                 body="EOT")
-        # self.transmit_eot_to_histogrammer()
-
-        self.histogram_syncronizer_queue.basic_publish(exchange='histogram_syncronizer',
-                                                       routing_key='',
-                                                       body="EOT")
-        self.same_text_identifier_queue.basic_publish(exchange='',
-                                                      routing_key='same_text_identifier',
-                                                      body="EOT")
-
-    def close_connections(self):
-        self.client_queue.close()
-        self.raw_files_channel.close()
-        self.funniness_analyzer_queue.close()
-        self.threshold_analyzer_queue.close()
-        self.rating_analyzer_queue.close()
-        self.histogram_queue.close()
-        self.same_text_identifier_queue.close()
-        self.sink_queue.close()
-        self.histogram_syncronizer_queue.close()
-
     def process_json(self, received_json):
         if "businesses" in received_json.keys():
-            # logging.info("lgging businesses")
-            # logging.info(type(received_json["businesses"]))
-            # logging.info(len(received_json["businesses"]))
             self.process_businesses(received_json["businesses"])
         elif "reviews" in received_json.keys():
-            # logging.info("lgging reviews")
-            # logging.info(type(received_json["reviews"]))
-            # logging.info(len(received_json["reviews"]))
             self.process_reviews_json(received_json["reviews"])
         else:
             logging.error("JSON received contained not businesses nor reviews.")
 
     def process_businesses(self, businesses):
-        # logging.info("processing busns json")
-        self.busns_jsons_received += 1
-        # logging.info("self.busns_jsons_received: {}".format(self.busns_jsons_received))
         businesses_to_send = []
         for bus in businesses:
             bus_json = json.loads(bus)
@@ -142,9 +101,6 @@ class Receiver():
                                                     body=json.dumps({"businesses": businesses_to_send}))
 
     def process_reviews_json(self, reviews):
-        # logging.info("processing revws json")
-        self.revws_jsons_received += 1
-        # logging.info("self.revws_jsons_received: {}".format(self.revws_jsons_received))
         reviews_for_funniness_analyzer = []
         reviews_for_threshold_analyzer = []
         reviews_for_rating_analyzer = []
@@ -181,9 +137,30 @@ class Receiver():
                                            routing_key='histogram',
                                            body=json.dumps(reviews_for_histogram))
 
-    def transmit_eot_to_histogrammer(self):
-        msg = "EOT"
-        logging.info("sending EOT to hist sync.")
-        self.histogram_syncronizer_queue.basic_publish(exchange='',
-                                                       routing_key='histogram_syncronizer',
-                                                       body=msg)
+    def transmit_eot_cascade(self):
+        self.funniness_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='funniness_analyzer',
+                                                    body="EOT")
+        self.threshold_analyzer_queue.basic_publish(exchange='',
+                                                    routing_key='threshold_analyzer',
+                                                    body="EOT")
+        self.rating_analyzer_queue.basic_publish(exchange='',
+                                                 routing_key='rating_analyzer',
+                                                 body="EOT")
+        self.histogram_syncronizer_queue.basic_publish(exchange='histogram_syncronizer',
+                                                       routing_key='',
+                                                       body="EOT")
+        self.same_text_identifier_queue.basic_publish(exchange='',
+                                                      routing_key='same_text_identifier',
+                                                      body="EOT")
+
+    def close_connections(self):
+        self.client_queue.close()
+        self.raw_files_channel.close()
+        self.funniness_analyzer_queue.close()
+        self.threshold_analyzer_queue.close()
+        self.rating_analyzer_queue.close()
+        self.histogram_queue.close()
+        self.same_text_identifier_queue.close()
+        self.sink_queue.close()
+        self.histogram_syncronizer_queue.close()

@@ -7,7 +7,7 @@ import pika
 class Histogram():
     def __init__(self):
         self.busns_jsons_received = 0
-        logging.info("creating funniness analyzer")
+        logging.info("creating Histogram analyzer")
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
 
         self.channel = self.initialize_queue()
@@ -32,6 +32,14 @@ class Histogram():
                               on_message_callback=self.callback)
         return channel
 
+    def callback(self, ch, method, properties, body):
+        if body.decode()[:3] == "EOT":
+            self.process_eot_msg(body, ch, method)
+        else:
+            received_json = json.loads(body.decode())
+            self.process_json(received_json)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+
     def initialize_histogram_sink_queue(self):
         channel = self.connection.channel()
         channel.exchange_declare(exchange='histogram_sink', exchange_type='fanout')
@@ -41,17 +49,6 @@ class Histogram():
         channel = self.connection.channel()
         channel.exchange_declare(exchange='histogram_syncronizer', exchange_type='fanout')
         return channel
-
-    def callback(self, ch, method, properties, body):
-        if body.decode()[:3] == "EOT":
-            self.process_eot_msg(body, ch, method)
-            # self.report_results()
-            # ch.basic_ack(delivery_tag=method.delivery_tag)
-            # self.close_connections()
-        else:
-            received_json = json.loads(body.decode())
-            self.process_json(received_json)
-            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_eot_msg(self, body, ch, method):
         self.report_results()
@@ -67,15 +64,12 @@ class Histogram():
         self.close_connections()
 
     def process_json(self, received_bulk):
-        # logging.info("received some json")
-        # logging.info(received_bulk)
         for element in received_bulk:
             weekday = datetime.datetime.strptime(element['date'].split()[0], "%Y-%m-%d").strftime("%A")
             self.histogram[weekday] += 1
 
     def report_results(self):
         results_to_send = self.histogram
-        # logging.info(results_to_send)
         self.histogram_sink_queue.basic_publish(exchange='histogram_sink', routing_key='',
                                                 body=json.dumps(results_to_send))
 

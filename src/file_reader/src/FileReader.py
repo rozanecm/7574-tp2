@@ -3,13 +3,11 @@ import logging
 import os
 import zipfile
 
-# LINES_TO_SEND = 100
 LINES_TO_SEND = 50000
 
 
 class FileReader():
     def __init__(self, connection, channel, num_of_data_receivers):
-        logging.info("creating file reaaaer")
         self.num_of_data_receivers = num_of_data_receivers
         self.connection = connection
         self.channel = channel
@@ -27,11 +25,6 @@ class FileReader():
 
         channel.basic_consume(queue=queue_name, on_message_callback=self.callback)
 
-        # don't dispatch a new message to a worker until it has processed
-        # and acknowledged the previous one. Instead, it will dispatch it
-        # to the next worker that is not still busy.
-        # src: https://www.rabbitmq.com/tutorials/tutorial-two-python.html
-        # channel.basic_qos(prefetch_count=1)
         return channel
 
     def callback(self, ch, method, properties, body):
@@ -61,8 +54,6 @@ class FileReader():
         received_json = json.loads(msg)
         logging.info(type(received_json))
         print(json.dumps(received_json, indent=2))
-        # logging.info(json.dumps(received_json, indent=2))
-        # self.connection.close()
 
     def run(self):
         logging.info("file reader running...")
@@ -76,7 +67,6 @@ class FileReader():
         self.transmit_end_of_transmission_signal(self.num_of_data_receivers)
 
         self.receiving_channel.start_consuming()
-        # self.connection.close()
 
     def transmit_file_info(self, zip_path, file_in_zip, data_identifier, nrows=0):
         """
@@ -110,7 +100,6 @@ class FileReader():
     def send_bulk(self, lines_to_send, data_identifier):
         dict_to_send = {data_identifier: lines_to_send}
         body = json.dumps(dict_to_send)
-        # logging.info("sending {} lines".format(len(lines_to_send)))
         self.channel.basic_publish(exchange='',
                                    routing_key='raw_files',
                                    body=body)

@@ -35,11 +35,6 @@ class HistogramSink():
 
         channel.basic_consume(queue=queue_name, on_message_callback=self.callback)
 
-        # don't dispatch a new message to a worker until it has processed
-        # and acknowledged the previous one. Instead, it will dispatch it
-        # to the next worker that is not still busy.
-        # src: https://www.rabbitmq.com/tutorials/tutorial-two-python.html
-        # channel.basic_qos(prefetch_count=1)
         return channel
 
     def callback(self, ch, method, properties, body):
@@ -67,8 +62,6 @@ class HistogramSink():
         for key in self.results[0]:
             sum_this_key = 0
             for dict in self.results:
-                # logging.info(type(dict[key]))
-                # logging.info(dict[key])
                 sum_this_key += dict[key]
             d_res[key] = sum_this_key
         return d_res

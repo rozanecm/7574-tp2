@@ -34,16 +34,6 @@ class ThresholdAnalyzer():
                               on_message_callback=self.callback)
         return channel
 
-    def initialize_sink_queue(self):
-        channel = self.connection.channel()
-        channel.exchange_declare(exchange='sink', exchange_type='fanout')
-        return channel
-
-    def initialize_bot_detector_queue(self):
-        channel = self.connection.channel()
-        channel.exchange_declare(exchange='bot_detector', exchange_type='fanout')
-        return channel
-
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
@@ -54,10 +44,17 @@ class ThresholdAnalyzer():
             self.process_json(received_json)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
+    def initialize_sink_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='sink', exchange_type='fanout')
+        return channel
+
+    def initialize_bot_detector_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='bot_detector', exchange_type='fanout')
+        return channel
+
     def process_json(self, received_msg):
-        # logging.info("received some json")
-        # logging.info(received_msg)
-        # logging.info(type(received_msg))
         for e in received_msg:
             current_json = json.loads(json.dumps(e))
             if current_json["user_id"] not in self.reviewers_count.keys():
@@ -67,12 +64,8 @@ class ThresholdAnalyzer():
 
     def report_results(self):
         (results_to_send, results_for_bot_detector, results_for_thres_and_rating_analyzer) = self.process_end_results()
-        # logging.info("reporting results:\n"
-        #              "all data here: {}\n"
-        #              "results to send: {}".format(self.reviewers_count, results_to_send))
         self.sink_queue.basic_publish(exchange='sink', routing_key='', body=json.dumps(
             {"Users with {}+ reviews".format(MSGS_THRESHOLD): len(results_to_send)}, indent=2))
-        # logging.info({"threshold_breachers": results_for_bot_detector})
         self.bot_detector_queue.basic_publish(exchange='bot_detector', routing_key='',
                                               body=json.dumps({"threshold_breachers": results_for_bot_detector}))
         self.bot_detector_queue.basic_publish(exchange='thresh_and_rating_analyzer', routing_key='',

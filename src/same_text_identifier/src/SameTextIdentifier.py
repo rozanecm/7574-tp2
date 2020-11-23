@@ -6,7 +6,7 @@ import pika
 class SameTextIdentifier():
     def __init__(self):
         self.busns_jsons_received = 0
-        logging.info("creating funniness analyzer")
+        logging.info("creating same text identifier")
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq"))
 
         self.channel = self.initialize_queue()
@@ -30,11 +30,6 @@ class SameTextIdentifier():
                               on_message_callback=self.callback)
         return channel
 
-    def initialize_bot_detector_queue(self):
-        channel = self.connection.channel()
-        channel.exchange_declare(exchange='bot_detector', exchange_type='fanout')
-        return channel
-
     def callback(self, ch, method, properties, body):
         if body.decode() == "EOT":
             self.report_results()
@@ -45,9 +40,12 @@ class SameTextIdentifier():
             self.process_json(received_json)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
+    def initialize_bot_detector_queue(self):
+        channel = self.connection.channel()
+        channel.exchange_declare(exchange='bot_detector', exchange_type='fanout')
+        return channel
+
     def process_json(self, received_bluk):
-        # logging.info("received some json")
-        # logging.info(received_bluk)
         for element in received_bluk:
             current_json = json.loads(json.dumps(element))
             if current_json["user_id"] not in self.last_texts.keys():
@@ -57,7 +55,6 @@ class SameTextIdentifier():
 
     def report_results(self):
         results_to_send = list(self.always_same_text[True])
-        # logging.info("results_to_send: {}".format(results_to_send))
         self.bot_detector_queue.basic_publish(exchange='bot_detector', routing_key='',
                                               body=json.dumps({"same_texters": results_to_send}))
 
